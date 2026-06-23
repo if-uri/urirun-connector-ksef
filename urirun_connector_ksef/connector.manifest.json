@@ -1,0 +1,83 @@
+{
+  "id": "ksef",
+  "name": "KSeF 2.0",
+  "status": "available",
+  "category": "Government / e-invoicing",
+  "summary": "Polish national e-invoicing (KSeF 2.0) as ksef:// routes: auth, send invoice, query, download.",
+  "description": "KSeF 2.0 reference connector. The HTTP surface is declarative (urirun fetch adapter, environments test/demo/prod). The ksef-token auth handshake (challenge -> RSA-OAEP(token|timestamp) -> poll -> redeem) and client-side crypto (AES-256-CBC + RSAES-OAEP, SHA-256 invoice hash) are the two imperative helpers. The access token is addressed by reference (getv://KSEF_ACCESS_TOKEN), never embedded. Smoke against the TEST environment with random NIPs.",
+  "uriSchemes": [
+    "ksef"
+  ],
+  "routes": [
+    "ksef://demo/auth/challenge",
+    "ksef://demo/cert/enroll",
+    "ksef://demo/cert/enrollment-data",
+    "ksef://demo/cert/limits",
+    "ksef://demo/invoice/{ksefNumber}",
+    "ksef://demo/invoices/query",
+    "ksef://demo/session/batch/open",
+    "ksef://demo/session/online/{ref}/send",
+    "ksef://demo/session/{ref}/close",
+    "ksef://demo/session/{ref}/failed",
+    "ksef://demo/session/{ref}/invoices",
+    "ksef://demo/session/{ref}/upo",
+    "ksef://demo/sessions/query/list",
+    "ksef://prod/auth/challenge",
+    "ksef://prod/cert/enroll",
+    "ksef://prod/cert/enrollment-data",
+    "ksef://prod/cert/limits",
+    "ksef://prod/invoice/{ksefNumber}",
+    "ksef://prod/invoices/query",
+    "ksef://prod/session/batch/open",
+    "ksef://prod/session/online/{ref}/send",
+    "ksef://prod/session/{ref}/close",
+    "ksef://prod/session/{ref}/failed",
+    "ksef://prod/session/{ref}/invoices",
+    "ksef://prod/session/{ref}/upo",
+    "ksef://prod/sessions/query/list",
+    "ksef://test/auth/challenge",
+    "ksef://test/cert/enroll",
+    "ksef://test/cert/enrollment-data",
+    "ksef://test/cert/limits",
+    "ksef://test/invoice/{ksefNumber}",
+    "ksef://test/invoices/query",
+    "ksef://test/session/batch/open",
+    "ksef://test/session/online/{ref}/send",
+    "ksef://test/session/{ref}/close",
+    "ksef://test/session/{ref}/failed",
+    "ksef://test/session/{ref}/invoices",
+    "ksef://test/session/{ref}/upo",
+    "ksef://test/sessions/query/list"
+  ],
+  "useCases": [
+    "Authenticate with a KSeF token and obtain a JWT access token.",
+    "Encrypt and send an FA(3) invoice in an online session, then poll acceptance/UPO.",
+    "Query accepted invoices and download by ksefNumber."
+  ],
+  "requires": [
+    "python>=3.10",
+    "cryptography>=42"
+  ],
+  "adapterKinds": [
+    "fetch"
+  ],
+  "install": {
+    "mode": "urirun-extra",
+    "pipSpec": "urirun-connector-ksef @ git+https://github.com/if-uri/urirun-connector-ksef.git@v0.1.0"
+  },
+  "provenance": "community",
+  "publisher": {
+    "name": "if-uri",
+    "url": "https://ifuri.com",
+    "github": "https://github.com/if-uri"
+  },
+  "docsUrl": "https://github.com/if-uri/urirun-connector-ksef",
+  "keywords": [
+    "ksef",
+    "e-invoicing",
+    "faktury",
+    "government",
+    "poland",
+    "connector"
+  ]
+}
