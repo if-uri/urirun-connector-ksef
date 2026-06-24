@@ -84,33 +84,38 @@ def authenticate(env: str, nip: str, token: str = "", public_key: str = "", exec
             plan = auth.dry_run_plan(env, nip)
             plan["method"] = "xades"
             plan["note"] = "set --key + --cert (qualified) + --execute to sign for real (use TEST env)"
-            return plan
-        return auth.authenticate_xades(env, context_nip=nip, private_key_pem=private_key, cert_pem=cert)
+            return urirun.tag(plan, "auth-plan")
+        return urirun.tag(auth.authenticate_xades(env, context_nip=nip, private_key_pem=private_key, cert_pem=cert),
+                          "auth-session")
     if not (execute and token and public_key):
         plan = auth.dry_run_plan(env, nip)
         plan["method"] = "token"
         plan["note"] = "set token + public_key + execute=True to authenticate for real (use TEST env)"
-        return plan
-    return auth.authenticate(env, token=token, context_nip=nip, public_key_material=public_key)
+        return urirun.tag(plan, "auth-plan")
+    return urirun.tag(auth.authenticate(env, token=token, context_nip=nip, public_key_material=public_key),
+                      "auth-session")
 
 
 def sign_auth_request(challenge: str, nip: str, private_key_pem: str, cert_pem: str) -> dict[str, Any]:
     """Build + sign an AuthTokenRequest locally (offline XAdES demo / debugging)."""
     out = xades.signed_auth_request(challenge, nip, private_key_pem, cert_pem)
-    return {"ok": True, "connector": CONNECTOR_ID, "verified": xades.verify_xml_enveloped(out["signedXml"].encode()),
-            **out}
+    return urirun.tag({"ok": True, "connector": CONNECTOR_ID,
+                       "verified": xades.verify_xml_enveloped(out["signedXml"].encode()), **out},
+                      "signed-request")
 
 
 def encrypt_invoice(invoice_xml: bytes, symmetric_key: bytes | None = None) -> dict[str, Any]:
     """Encrypt one invoice (fresh AES key by default) -> send-request fields."""
     key = symmetric_key or crypto.aes_key()
-    return {"ok": True, "connector": CONNECTOR_ID, **crypto.encrypt_invoice(key, invoice_xml)}
+    return urirun.tag({"ok": True, "connector": CONNECTOR_ID, **crypto.encrypt_invoice(key, invoice_xml)},
+                      "encrypted-invoice")
 
 
 def prepare_batch(zip_bytes: bytes, symmetric_key: bytes | None = None) -> dict[str, Any]:
     """Split a ZIP into <=100MB parts and encrypt each -> fileParts metadata (§5.2)."""
     key = symmetric_key or crypto.aes_key()
-    return {"ok": True, "connector": CONNECTOR_ID, **crypto.split_and_encrypt_batch(zip_bytes, key)}
+    return urirun.tag({"ok": True, "connector": CONNECTOR_ID, **crypto.split_and_encrypt_batch(zip_bytes, key)},
+                      "batch")
 
 
 def make_csr(common_name: str, *, organization: str = "", country: str = "", serial: str = "",
@@ -123,4 +128,5 @@ def make_csr(common_name: str, *, organization: str = "", country: str = "", ser
         subject["country_name"] = country
     if serial:
         subject["serial_number"] = serial
-    return {"ok": True, "connector": CONNECTOR_ID, **crypto.generate_csr(subject, key_type=key_type)}
+    return urirun.tag({"ok": True, "connector": CONNECTOR_ID, **crypto.generate_csr(subject, key_type=key_type)},
+                      "csr")
