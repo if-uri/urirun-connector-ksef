@@ -12,6 +12,7 @@ license = "Apache-2.0"
 authors = [{ name = "if-uri" }]
 dependencies = [
   "urirun>=0.4.14",
+  "urirun-declarative>=0.1",
   "cryptography>=42",
 ]
 
