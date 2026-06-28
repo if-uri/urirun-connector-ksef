@@ -1,0 +1,158 @@
+{
+  "contracts": {
+    "auth/challenge": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "cert/enroll": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "cert/enrollment-data": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "cert/limits": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "invoice/{ksefNumber}": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": { "ksefNumber": "str" },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": { "ksefNumber": "KSEF-123" }, "result": { "ok": true } }
+      ]
+    },
+    "invoices/query": {
+      "version": "v1",
+      "effect": "query",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "session/batch/open": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    },
+    "session/online/{ref}/send": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": {
+        "ref": "str",
+        "invoiceHash": "str",
+        "encryptedInvoiceContent": "str"
+      },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        {
+          "payload": {
+            "ref": "REF-1",
+            "invoiceHash": "sha256:abc",
+            "encryptedInvoiceContent": "base64-content"
+          },
+          "result": { "ok": true }
+        }
+      ]
+    },
+    "session/{ref}/close": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": { "ref": "str" },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": { "ref": "REF-1" }, "result": { "ok": true } }
+      ]
+    },
+    "session/{ref}/failed": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": { "ref": "str" },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": { "ref": "REF-1" }, "result": { "ok": true } }
+      ]
+    },
+    "session/{ref}/invoices": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": { "ref": "str" },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": { "ref": "REF-1" }, "result": { "ok": true } }
+      ]
+    },
+    "session/{ref}/upo": {
+      "version": "v1",
+      "effect": "command",
+      "reversible": false,
+      "inp": { "ref": "str" },
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": { "ref": "REF-1" }, "result": { "ok": true } }
+      ]
+    },
+    "sessions/query/list": {
+      "version": "v1",
+      "effect": "query",
+      "reversible": false,
+      "inp": {},
+      "out": { "ok": "bool" },
+      "errors": ["unauthenticated", "precondition-unmet", "degraded-backend"],
+      "examples": [
+        { "payload": {}, "result": { "ok": true } }
+      ]
+    }
+  }
+}
