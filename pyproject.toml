@@ -30,4 +30,4 @@ where = ["."]
 include = ["urirun_connector_ksef*"]
 
 [tool.setuptools.package-data]
-urirun_connector_ksef = ["connector.manifest.json"]
+urirun_connector_ksef = ["connector.manifest.json", "contracts.json"]
