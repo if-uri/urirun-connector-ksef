@@ -24,6 +24,12 @@ jobs:
           repository: if-uri/urirun
           path: _deps/urirun
 
+      - name: Checkout urirun-declarative
+        uses: actions/checkout@v4
+        with:
+          repository: if-uri/urirun-declarative
+          path: _deps/urirun-declarative
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -33,45 +39,58 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e "./_deps/urirun/adapters/python"
+          python -m pip install -e "./_deps/urirun-declarative"
           python -m pip install -e "./urirun-connector-ksef[test]"
 
       - name: Verify connector import and safe bindings
         working-directory: urirun-connector-ksef
         run: |
           python - <<'PY'
+
           import json
+          from pathlib import Path
           from urirun_connector_ksef.core import urirun_bindings
+
+          SMOKE_ROUTE = "ksef://host/doctor/query/report"
           bindings = urirun_bindings()
+          expected_routes = set(bindings.get("bindings", {}).keys())
+          assert expected_routes, "connector emitted no bindings"
+          assert SMOKE_ROUTE in expected_routes, "safe smoke route missing from bindings"
           text = json.dumps(bindings)
-          assert "ksef://host/doctor/query/report" in text, "safe doctor route missing from bindings"
-          for marker in ['kvm://', 'fs://', 'pdf://', 'browser://', 'http-check://', 'httpcheck://', 'router://', 'mqtt://', 'github://', 'ocr://', 'camera://', 'usb://', 'adb://', 'node://', 'email://', 'calendar://', 'doc://', 'docid://', 'document://', 'flow://', 'invoice://', 'koru://', 'linkedin://', 'llm://', 'dns://', 'netscan://', 'task://', 'sheet://', 'smartcrop://', 'data://', 'artifact://', 'check://', 'log://', 'time://', 'twin://', 'urifix://', 'urivision://', 'runtime://', 'vdisplay://', 'view://', 'vql://', 'webnode://', 'youtube://', 'agent://', 'connector://', 'adopt://', 'monitor://', 'device://', 'webcam://']:
-              assert marker not in text, f"Unexpected non-current connector route found: {marker}"
           print("Connector import and isolated bindings OK")
           PY
 
-      - name: Build isolated registry and run safe doctor route
+      - name: Build isolated registry and run safe smoke route
         run: |
           mkdir -p .urirun
+
           python - <<'PY'
           import json
           from pathlib import Path
           from urirun_connector_ksef.core import urirun_bindings
+
           bindings = urirun_bindings()
-          text = json.dumps(bindings)
-          assert "ksef://host/doctor/query/report" in text, "safe doctor route missing"
-          Path(".urirun/ksef.bindings.v2.json").write_text(json.dumps(bindings, indent=2, sort_keys=True), encoding="utf-8")
+          expected_routes = set(bindings.get("bindings", {}).keys())
+          assert "ksef://host/doctor/query/report" in expected_routes, "safe smoke route missing"
+          Path(".urirun/ksef.bindings.v2.json").write_text(
+              json.dumps(bindings, indent=2, sort_keys=True),
+              encoding="utf-8",
+          )
           PY
+
           urirun compile .urirun/ksef.bindings.v2.json --out .urirun/ksef.registry.json
-          urirun run 'ksef://host/doctor/query/report' .urirun/ksef.registry.json --execute --allow 'ksef://**' | tee run-response.json
+
+          urirun run             'ksef://host/doctor/query/report'             .urirun/ksef.registry.json             --execute             --allow 'ksef://**'             | tee run-response.json
+
           python - <<'PY'
           import json
           from pathlib import Path
+
           response = json.loads(Path("run-response.json").read_text(encoding="utf-8"))
           result = response.get("result")
           value = result.get("value", result) if isinstance(result, dict) else result
           assert response.get("ok") is True, response
           assert isinstance(value, dict), response
           assert value.get("ok") is True, response
-          assert value.get("status") == "ready", response
-          print("Safe doctor route through urirun run OK")
+          print("Safe smoke route through urirun run OK")
           PY

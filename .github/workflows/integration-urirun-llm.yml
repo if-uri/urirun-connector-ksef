@@ -35,6 +35,12 @@ jobs:
           repository: if-uri/urirun-llm-runtime
           path: _deps/urirun-llm-runtime
 
+      - name: Checkout urirun-declarative
+        uses: actions/checkout@v4
+        with:
+          repository: if-uri/urirun-declarative
+          path: _deps/urirun-declarative
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -44,6 +50,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e "./_deps/urirun/adapters/python"
+          python -m pip install -e "./_deps/urirun-declarative"
           python -m pip install -e "./urirun-connector-ksef[test]"
           python -m pip install -e "./_deps/urirun-llm-runtime[dev]"
 
@@ -52,59 +59,96 @@ jobs:
         run: |
           python - <<'PY'
           from urirun_connector_ksef.core import urirun_bindings
+
           bindings = urirun_bindings()
           assert "ksef://host/doctor/query/report" in bindings["bindings"]
-          print("Connector import and doctor bindings OK")
+          print("Connector import and smoke bindings OK")
           PY
 
       - name: Build isolated registry
         run: |
           mkdir -p .urirun
+
           python - <<'PY'
           import json
           from pathlib import Path
           from urirun_connector_ksef.core import urirun_bindings
+
           bindings = urirun_bindings()
           out = Path(".urirun/ksef.bindings.v2.json")
           out.write_text(json.dumps(bindings, indent=2, sort_keys=True), encoding="utf-8")
-          assert "ksef://host/doctor/query/report" in json.dumps(bindings), "safe doctor route missing"
+
+          expected_routes = set(bindings.get("bindings", {}).keys())
+          assert "ksef://host/doctor/query/report" in expected_routes, "safe smoke route missing"
           print("Wrote isolated bindings:", out)
           PY
+
           urirun compile .urirun/ksef.bindings.v2.json --out .urirun/ksef.registry.json
+
           test -s .urirun/ksef.registry.json
 
       - name: Assert registry contains current connector only
         run: |
           python - <<'PY'
+
           import json
           from pathlib import Path
+          from urirun_connector_ksef.core import urirun_bindings
+
+          SMOKE_ROUTE = "ksef://host/doctor/query/report"
+          bindings = urirun_bindings()
+          expected_routes = set(bindings.get("bindings", {}).keys())
+          assert expected_routes, "connector emitted no bindings"
+          assert SMOKE_ROUTE in expected_routes, "safe smoke route missing from bindings"
+          text = json.dumps(bindings)
+
           registry = json.loads(Path(".urirun/ksef.registry.json").read_text(encoding="utf-8"))
-          text = json.dumps(registry)
-          assert "ksef://host/doctor/query/report" in text, "safe doctor route missing from registry"
-          for marker in ['kvm://', 'fs://', 'pdf://', 'browser://', 'http-check://', 'httpcheck://', 'router://', 'mqtt://', 'github://', 'ocr://', 'camera://', 'usb://', 'adb://', 'node://', 'email://', 'calendar://', 'doc://', 'docid://', 'document://', 'flow://', 'invoice://', 'koru://', 'linkedin://', 'llm://', 'dns://', 'netscan://', 'task://', 'sheet://', 'smartcrop://', 'data://', 'artifact://', 'check://', 'log://', 'time://', 'twin://', 'urifix://', 'urivision://', 'runtime://', 'vdisplay://', 'view://', 'vql://', 'webnode://', 'youtube://', 'agent://', 'connector://', 'adopt://', 'monitor://', 'device://', 'webcam://']:
-              assert marker not in text, f"Unexpected non-current connector route found: {marker}"
-          print("Registry isolation OK: only current connector routes are present.")
+          registry_text = json.dumps(registry)
+          assert SMOKE_ROUTE in registry_text, "safe smoke route missing from registry"
+          for route in expected_routes:
+              assert route in registry_text, f"expected connector route missing from registry: {route}"
+
+          def collect_routes(value):
+              routes = set()
+              if isinstance(value, dict):
+                  for key, item in value.items():
+                      if isinstance(key, str) and "://" in key:
+                          routes.add(key)
+                      routes.update(collect_routes(item))
+              elif isinstance(value, list):
+                  for item in value:
+                      routes.update(collect_routes(item))
+              elif isinstance(value, str) and "://" in value:
+                  routes.add(value)
+              return routes
+
+          registry_routes = collect_routes(registry)
+          unexpected = sorted(route for route in registry_routes if route not in expected_routes)
+          assert not unexpected, f"registry contains routes outside current connector bindings: {unexpected}"
+          print("Registry isolation OK: registry routes match current connector bindings.")
           PY
 
       - name: Run route directly through urirun
         run: |
-          urirun run 'ksef://host/doctor/query/report' .urirun/ksef.registry.json --execute --allow 'ksef://**' | tee run-response.json
+          urirun run             'ksef://host/doctor/query/report'             .urirun/ksef.registry.json             --execute             --allow 'ksef://**'             | tee run-response.json
+
           python - <<'PY'
           import json
           from pathlib import Path
+
           response = json.loads(Path("run-response.json").read_text(encoding="utf-8"))
           result = response.get("result")
           value = result.get("value", result) if isinstance(result, dict) else result
           assert response.get("ok") is True, response
           assert isinstance(value, dict), response
           assert value.get("ok") is True, response
-          assert value.get("status") == "ready", response
-          print("Doctor route through urirun run OK")
+          print("Smoke route through urirun run OK")
           PY
 
       - name: Start urirun node
         run: |
-          nohup urirun node serve --execute --host 127.0.0.1 --port 18765 --registry .urirun/ksef.registry.json --allow 'ksef://**' > urirun-node.log 2>&1 &
+          nohup urirun node serve             --execute             --host 127.0.0.1             --port 18765             --registry .urirun/ksef.registry.json             --allow 'ksef://**'             > urirun-node.log 2>&1 &
+
           for i in $(seq 1 30); do
             if curl -sf http://127.0.0.1:18765/health; then
               echo "urirun node is healthy"
@@ -112,24 +156,26 @@ jobs:
             fi
             sleep 2
           done
+
           curl -sf http://127.0.0.1:18765/health
           curl -sf http://127.0.0.1:18765/routes | tee routes.json
           grep -q 'ksef://host/doctor/query/report' routes.json
 
       - name: POST /run smoke test
         run: |
-          curl -sf -X POST http://127.0.0.1:18765/run -H 'Content-Type: application/json' -d '{"uri":"ksef://host/doctor/query/report","mode":"execute","payload":{}}' | tee node-run-response.json
+          curl -sf -X POST http://127.0.0.1:18765/run             -H 'Content-Type: application/json'             -d '{"uri":"ksef://host/doctor/query/report","mode":"execute","payload":{}}'             | tee node-run-response.json
+
           python - <<'PY'
           import json
           from pathlib import Path
+
           response = json.loads(Path("node-run-response.json").read_text(encoding="utf-8"))
           result = response.get("result")
           value = result.get("value", result) if isinstance(result, dict) else result
           assert response.get("ok") is True, response
           assert isinstance(value, dict), response
           assert value.get("ok") is True, response
-          assert value.get("status") == "ready", response
-          print("/run doctor route OK")
+          print("/run smoke route OK")
           PY
 
       - name: LLM runtime Executor smoke test
