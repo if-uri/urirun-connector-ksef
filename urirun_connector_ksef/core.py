@@ -15,11 +15,14 @@ from __future__ import annotations
 from typing import Any
 
 import urirun
+
+from . import _urirun_compat
 from urirun.connectors import declarative
 
 from . import auth, crypto, xades
 
 CONNECTOR_ID = "ksef"
+conn = _urirun_compat.connector(CONNECTOR_ID, scheme="ksef")
 
 _BEARER = {"Authorization": "Bearer {getv:KSEF_ACCESS_TOKEN}"}
 
@@ -69,11 +72,33 @@ SPEC = {
 
 
 def connector_manifest() -> dict[str, Any]:
-    return urirun.load_manifest(__package__)
+    return _urirun_compat.load_manifest(__package__)
 
+
+
+@conn.handler("ksef://host/doctor/query/report", isolated=True, meta={"label": "Connector readiness report"})
+def doctor() -> dict[str, Any]:
+    """Return a safe, read-only connector readiness report for CI smoke tests."""
+    return {
+        "ok": True,
+        "connector": CONNECTOR_ID,
+        "version": _connector_version(),
+        "status": "ready",
+    }
+
+
+def _connector_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("urirun-connector-ksef")
+    except Exception:
+        return "0.1.0"
 
 def urirun_bindings() -> dict[str, Any]:
-    return declarative.bindings_from_spec(SPEC)
+    bindings = declarative.bindings_from_spec(SPEC)
+    bindings.setdefault("bindings", {}).update(conn.bindings().get("bindings", {}))
+    return bindings
 
 
 def authenticate(env: str, nip: str, token: str = "", public_key: str = "", execute: bool = False,
