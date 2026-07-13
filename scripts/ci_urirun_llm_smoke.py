@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from urllib.parse import unquote
 
 from urirun_llm_runtime import Executor
 from urirun_connector_ksef.core import urirun_bindings
@@ -39,10 +40,11 @@ def main() -> None:
         fail(f"/health returned non-dict response: {health!r}")
 
     routes = set(executor.routes())
-    if SMOKE_URI not in routes:
+    normalized_routes = {unquote(route) for route in routes}
+    if SMOKE_URI not in normalized_routes:
         fail(f"{SMOKE_URI} is missing from /routes. Routes: {sorted(routes)!r}")
 
-    unexpected = sorted(route for route in routes if route not in expected_routes)
+    unexpected = sorted(route for route in normalized_routes if route not in expected_routes)
     if unexpected:
         fail(f"Unexpected routes outside current connector bindings found: {unexpected!r}")
 
