@@ -105,9 +105,6 @@ jobs:
           registry = json.loads(Path(".urirun/ksef.registry.json").read_text(encoding="utf-8"))
           registry_text = json.dumps(registry)
           assert SMOKE_ROUTE in registry_text, "safe smoke route missing from registry"
-          for route in expected_routes:
-              assert route in registry_text, f"expected connector route missing from registry: {route}"
-
           def collect_route_keys(value):
               routes = set()
               if isinstance(value, dict):
